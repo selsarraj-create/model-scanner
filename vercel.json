@@ -13,10 +13,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/**/*.py": {
-      "runtime": "python3.9@3.9.19"
-    }
-  }
+  ]
 }
