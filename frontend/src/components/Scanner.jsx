@@ -109,7 +109,7 @@ const Scanner = () => {
             </div>
 
             {/* Main Area */}
-            <div className="relative w-full aspect-[4/3] md:aspect-video bg-studio-charcoal rounded-2xl border border-white/10 shadow-2xl overflow-hidden group">
+            <div className="relative w-full min-h-[600px] md:min-h-0 md:aspect-video bg-studio-charcoal rounded-2xl border border-white/10 shadow-2xl overflow-hidden group">
 
                 {/* IDLE STATE */}
                 {state === 'IDLE' && (
