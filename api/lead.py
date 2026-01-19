@@ -35,7 +35,7 @@ class handler(BaseHTTPRequestHandler):
                 # Extract fields
                 data = {}
                 # Simple fields
-                for field in ['first_name', 'last_name', 'age', 'gender', 'email', 'phone', 'city', 'zip_code']:
+                for field in ['first_name', 'last_name', 'age', 'gender', 'email', 'phone', 'city', 'zip_code', 'campaign']:
                     if field in form:
                         data[field] = form[field].value
                 
@@ -142,6 +142,7 @@ class handler(BaseHTTPRequestHandler):
                 'category': category,
                 'analysis_json': analysis_data,
                 'image_url': locals().get('image_url'), # Add image_url if exists
+                'campaign': data.get('campaign'),
                 'webhook_sent': False,
                 'webhook_status': 'pending',
                 'webhook_response': None
