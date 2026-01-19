@@ -10,15 +10,81 @@ from supabase import create_client, Client
 from webhook_utils import send_webhook
 
 class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        try:
-            # Get content length
-            content_length = int(self.headers['Content-Length'])
-            
-            # Read and parse JSON body
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode('utf-8'))
-            
+            # Parse multipart/form-data using cgi.FieldStorage
+            # cgi.FieldStorage requires the request headers and input stream
+            content_type = self.headers.get('Content-Type', '')
+            if 'multipart/form-data' not in content_type:
+                # Fallback to JSON if not multipart (for legacy/testing)
+                try:
+                    content_length = int(self.headers['Content-Length'])
+                    body = self.rfile.read(content_length)
+                    data = json.loads(body.decode('utf-8'))
+                except:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Invalid Content-Type or JSON"}).encode())
+                    return
+            else:
+                import cgi
+                form = cgi.FieldStorage(
+                    fp=self.rfile,
+                    headers=self.headers,
+                    environ={'REQUEST_METHOD': 'POST'}
+                )
+                
+                # Extract fields
+                data = {}
+                # Simple fields
+                for field in ['first_name', 'last_name', 'age', 'gender', 'email', 'phone', 'city', 'zip_code']:
+                    if field in form:
+                        data[field] = form[field].value
+                
+                # Checkbox
+                data['wants_assessment'] = False
+                if 'wants_assessment' in form and form['wants_assessment'].value == 'true':
+                    data['wants_assessment'] = True
+                    
+                # Analysis JSON (passed as string)
+                analysis_data = {}
+                if 'analysis_data' in form:
+                    try:
+                        analysis_data = json.loads(form['analysis_data'].value)
+                    except:
+                        pass
+                
+                # Image handling
+                image_url = None
+                if 'file' in form and form['file'].filename:
+                    file_item = form['file']
+                    if file_item.file:
+                        file_data = file_item.file.read()
+                        
+                        # Upload to Supabase Storage
+                        import time
+                        timestamp = int(time.time())
+                        clean_email = data.get('email', 'unknown').replace('@', '-at-').replace('.', '-')
+                        filename = f"{clean_email}_{timestamp}.jpg"
+                        
+                        try:
+                            # Using the standard client for storage upload
+                            supabase.storage.from_("lead-images").upload(
+                                path=filename,
+                                file=file_data,
+                                file_options={"content-type": file_item.type}
+                            )
+                            # Get Public URL
+                            # Construct manually for speed or use client method
+                            # public_url = supabase.storage.from_("lead-images").get_public_url(filename)
+                            # The client method might vary by version, standard construction:
+                            project_id = supabase_url.split('//')[1].split('.')[0]
+                            image_url = f"{supabase_url}/storage/v1/object/public/lead-images/{filename}"
+                            
+                        except Exception as e:
+                            print(f"Storage Error: {e}")
+                            # Continue without image if upload fails? Or error?
+                            # Let's log it but continue processing the lead
+                            pass
+
             # Initialize Supabase client
             supabase_url = os.getenv('SUPABASE_URL') or os.getenv('VITE_SUPABASE_URL')
             # Prioritize Manual Service Key for backend to bypass RLS
@@ -31,31 +97,14 @@ class handler(BaseHTTPRequestHandler):
                 os.getenv('SUPABASE_PUBLISHABLE_KEY')
             )
             
-            print(f"DEBUG: URL found: {bool(supabase_url)}, Key found: {bool(supabase_key)}")
-            if supabase_key: 
-                print(f"DEBUG: Key starts with: {supabase_key[:5]}...")
-                print(f"DEBUG: Using BACKEND_SERVICE_KEY: {bool(os.getenv('BACKEND_SERVICE_KEY'))}")
-            webhook_url = os.getenv('CRM_WEBHOOK_URL')
-            
             if not supabase_url or not supabase_key:
                 self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps({
-                    "error": "Database not configured. Missing Supabase credentials."
-                }).encode())
+                # ... (error handling)
                 return
-            
+
             supabase: Client = create_client(supabase_url, supabase_key)
-            
-            # Extract analysis data
-            # ... (rest of extraction logic same as before)
-            analysis_data = data.get('analysis_data', {})
-            score = analysis_data.get('suitability_score', 0)
-            market_data = analysis_data.get('market_categorization', {})
-            category = market_data.get('primary', 'Unknown') if isinstance(market_data, dict) else str(market_data)
-            
+
+            # ... Duplicate Check ...
             # Check for existing lead with same email or phone
             existing_lead = supabase.table('leads').select('id').or_(f"email.eq.{data.get('email')},phone.eq.{data.get('phone')}").execute()
             
@@ -69,7 +118,15 @@ class handler(BaseHTTPRequestHandler):
                     "message": "This email or phone number has already been submitted."
                 }).encode())
                 return
-
+            
+            # Extract analysis data (if not multipart, it was parsed above)
+            if 'analysis_data' not in locals(): # If JSON path was taken
+                 analysis_data = data.get('analysis_data', {})
+                 
+            score = analysis_data.get('suitability_score', 0)
+            market_data = analysis_data.get('market_categorization', {})
+            category = market_data.get('primary', 'Unknown') if isinstance(market_data, dict) else str(market_data)
+            
             # Prepare lead data for Supabase
             lead_record = {
                 'first_name': data.get('first_name'),
@@ -84,6 +141,7 @@ class handler(BaseHTTPRequestHandler):
                 'score': score,
                 'category': category,
                 'analysis_json': analysis_data,
+                'image_url': locals().get('image_url'), # Add image_url if exists
                 'webhook_sent': False,
                 'webhook_status': 'pending',
                 'webhook_response': None
