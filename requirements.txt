@@ -4,4 +4,4 @@ google-generativeai
 python-multipart
 python-dotenv
 pydantic
-psycopg2-binary
+supabase
