@@ -22,6 +22,10 @@ except ImportError:
     def analyze_image(img_data, mime_type):
         return {"suitability_score": 0, "market_categorization": "Unknown"}
 
+# Fix path for Vercel import resolution
+import sys
+sys.path.append(os.path.dirname(__file__))
+
 from webhook_utils import send_webhook
 
 app = FastAPI()
