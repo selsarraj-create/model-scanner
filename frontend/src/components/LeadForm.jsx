@@ -292,7 +292,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Zip Code</label>
+                        <label className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Zip Code *</label>
                         <input
                             type="text"
                             required
