@@ -56,6 +56,20 @@ class handler(BaseHTTPRequestHandler):
             market_data = analysis_data.get('market_categorization', {})
             category = market_data.get('primary', 'Unknown') if isinstance(market_data, dict) else str(market_data)
             
+            # Check for existing lead with same email or phone
+            existing_lead = supabase.table('leads').select('id').or_(f"email.eq.{data.get('email')},phone.eq.{data.get('phone')}").execute()
+            
+            if existing_lead.data and len(existing_lead.data) > 0:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "error",
+                    "message": "This email or phone number has already been submitted."
+                }).encode())
+                return
+
             # Prepare lead data for Supabase
             lead_record = {
                 'first_name': data.get('first_name'),
