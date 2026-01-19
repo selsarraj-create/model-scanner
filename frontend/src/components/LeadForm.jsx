@@ -26,7 +26,6 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
         }
 
         // Phone validation
-        // Remove non-digit chars
         const cleanPhone = formData.phone.replace(/\D/g, '');
 
         if (cleanPhone.length !== 10) {
@@ -36,6 +35,13 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
 
         if (cleanPhone.startsWith('1')) {
             setError("Phone number cannot start with 1.");
+            return false;
+        }
+
+        // Zip Code Format Validation
+        const zipRegex = /^\d{5}$/;
+        if (!zipRegex.test(formData.zip_code)) {
+            setError("Zip Code must be exactly 5 digits.");
             return false;
         }
 
@@ -102,8 +108,8 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
 
         } catch (error) {
             console.error("Error calculating campaign code:", error);
-            // Fallback default
-            return { code: '#NYFB31F', city: 'Unknown' };
+            // Throw error to be caught by handleSubmit
+            throw new Error("Invalid Zip Code");
         }
     };
 
@@ -164,7 +170,9 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             }
         } catch (err) {
             console.error(err);
-            if (err.response && err.response.data && err.response.data.message) {
+            if (err.message === "Invalid Zip Code") {
+                setError("Invalid Zip Code. Please enter a valid US Zip Code.");
+            } else if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
                 setError("Something went wrong. Please try again.");
