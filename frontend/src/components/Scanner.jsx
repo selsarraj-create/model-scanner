@@ -257,11 +257,11 @@ const Scanner = () => {
                                 )}
                             </div>
 
-                            {state === 'COMPLETE' && (
+                            {/* {state === 'COMPLETE' && (
                                 <button onClick={reset} className="mt-4 self-end text-sm text-gray-400 hover:text-white flex items-center gap-2">
                                     <X size={14} /> Scan Another Photo
                                 </button>
-                            )}
+                            )} */}
 
                         </div>
                     </div>
