@@ -1,69 +1,45 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import json
-import typing_extensions as typing
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Fallback or load from environment
-# In a real scenario, ensure GOOGLE_API_KEY is in .env or passed here
-API_KEY = os.getenv("GOOGLE_API_KEY")
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
-    # Allow running without key if just testing scaffolding, but warn.
     print("WARNING: GOOGLE_API_KEY not found in environment.")
 
-genai.configure(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY)
 
-# Define the response schema explicitly for Gemini 1.5 strict output
-class FaceGeometry(typing.TypedDict):
+# Define Pydantic models for the response schema
+class FaceGeometry(BaseModel):
     primary_shape: str
     jawline_definition: str
     structural_note: str
 
-class MarketCategorization(typing.TypedDict):
+class MarketCategorization(BaseModel):
     primary: str
     rationale: str
 
-class AestheticAudit(typing.TypedDict):
+class AestheticAudit(BaseModel):
     lighting_quality: str
     professional_readiness: str
     technical_flaw: str
 
-class AnalysisResult(typing.TypedDict):
+class AnalysisResult(BaseModel):
     face_geometry: FaceGeometry
     market_categorization: MarketCategorization
     aesthetic_audit: AestheticAudit
     suitability_score: int
     scout_feedback: str
 
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-
-# Config for balanced creativity and JSON format
-generation_config = {
-    "temperature": 0.4,
-    "response_mime_type": "application/json",
-    "response_schema": AnalysisResult
-}
-
-# Safety settings to allow model analysis (BLOCK_NONE)
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
-
-model = genai.GenerativeModel(
-    'gemini-3-flash-preview',
-    generation_config=generation_config,
-    safety_settings=safety_settings
-)
-
 def analyze_image(image_bytes, mime_type="image/jpeg"):
     """
-    Analyzes an image using Gemini 1.5 Flash to extract technical industry markers.
+    Analyzes an image using Gemini to extract technical industry markers.
+    Used google-genai SDK (v1.0+).
     """
     try:
         # Prompt Pivot: Professional Technical Audit
@@ -100,36 +76,60 @@ def analyze_image(image_bytes, mime_type="image/jpeg"):
         CONSTRAINTS: 
         - Be brutally honest about 'Professional Readiness'. If it's a bathroom selfie, the score must reflect that.
         - Use precise industry terminology (e.g., 'high-fashion edge', 'relatable commercial appeal').
-        - Return ONLY valid JSON.
         """
         
         # Validating input type
         if not image_bytes:
             raise ValueError("No image data provided")
         
-        # Ensure image_bytes is passed correctly
-        # The SDK handles bytes directly if passed as a Part with mime_type
-        response = model.generate_content(
-            [
-                {"mime_type": mime_type, "data": image_bytes}, 
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp', # Using newest available model
+            contents=[
+                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
                 prompt
-            ]
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type='application/json',
+                response_schema=AnalysisResult,
+                temperature=0.4,
+                safety_settings=[
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                ]
+            )
         )
         
         # Check validation
-        print(f"Candidates generated: {len(response.candidates)}")
-        if not response.parts:
-             # If blocked despite safety settings, log it
-             print(f"Prompt FeedBack: {response.prompt_feedback}")
-             
-        return json.loads(response.text)
+        try:
+             # If parsed successfully by SDK
+             if response.parsed:
+                 return response.parsed.model_dump()
+             else:
+                 # Fallback to text parsing if response.parsed is None (rare with schema)
+                 return json.loads(response.text)
+        except Exception as e:
+            print(f"Parsing error: {e}. Raw text: {response.text}")
+            raise e
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"Error in Gemini analysis: {e}")
-        # Return a mock response if API fails (for development safety) or re-raise
-        # For now, returning minimal error structure
+        # Return a mock response if API fails
         return {
             "error": f"{str(e)}",
             "suitability_score": 0,
