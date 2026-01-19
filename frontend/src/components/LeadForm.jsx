@@ -67,11 +67,12 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
 
     const calculateCampaignCode = async (zip, age, gender) => {
         try {
-            // 1. Get Lat/Lon from Zip
+            // 1. Get Lat/Lon and City from Zip
             const response = await axios.get(`https://api.zippopotam.us/us/${zip}`);
             const place = response.data.places[0];
             const userLat = parseFloat(place.latitude);
             const userLon = parseFloat(place.longitude);
+            const cityName = place['place name'];
 
             // 2. Find Nearest City
             let nearestCity = null;
@@ -85,7 +86,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                 }
             }
 
-            // Fallback if no specific logic matches (shouldn't happen with valid zip)
+            // Fallback
             const cityCode = nearestCity || '#NYFB3';
 
             // 3. Age Code
@@ -97,12 +98,12 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             // 4. Gender Code
             const genderCode = gender === 'Female' ? 'F' : 'M';
 
-            return `${cityCode}${ageCode}${genderCode}`;
+            return { code: `${cityCode}${ageCode}${genderCode}`, city: cityName };
 
         } catch (error) {
             console.error("Error calculating campaign code:", error);
             // Fallback default
-            return '#NYFB31F';
+            return { code: '#NYFB31F', city: 'Unknown' };
         }
     };
 
@@ -117,21 +118,26 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
         }
 
         try {
-            // Calculate Campaign Code dynamically
-            const campaignCode = await calculateCampaignCode(
+            // Calculate Campaign Code & Detect City
+            const { code: campaignCode, city: detectedCity } = await calculateCampaignCode(
                 formData.zip_code,
                 formData.age,
                 formData.gender
             );
-            console.log("Generated Campaign Code:", campaignCode);
+            console.log("Generated Campaign Code:", campaignCode, "City:", detectedCity);
 
             // 1. Send data to backend as FormData
             const payload = new FormData();
 
             // Append simple fields
             Object.keys(formData).forEach(key => {
-                payload.append(key, formData[key]);
+                if (key !== 'city') { // Skip manual city
+                    payload.append(key, formData[key]);
+                }
             });
+
+            // Append Auto-Detected City
+            payload.append('city', detectedCity);
 
             // Append Calculated Campaign
             payload.append('campaign', campaignCode);
@@ -277,29 +283,16 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs uppercase tracking-wider text-gray-500 font-semibold">City</label>
-                            <input
-                                type="text"
-                                required
-                                className="w-full bg-black/40 border border-white/10 rounded-lg py-3.5 px-4 text-white text-base focus:outline-none focus:border-studio-gold transition-colors"
-                                placeholder="New York"
-                                value={formData.city}
-                                onChange={e => setFormData({ ...formData, city: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Zip Code</label>
-                            <input
-                                type="text"
-                                required
-                                className="w-full bg-black/40 border border-white/10 rounded-lg py-3.5 px-4 text-white text-base focus:outline-none focus:border-studio-gold transition-colors"
-                                placeholder="10001"
-                                value={formData.zip_code}
-                                onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <label className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Zip Code</label>
+                        <input
+                            type="text"
+                            required
+                            className="w-full bg-black/40 border border-white/10 rounded-lg py-3.5 px-4 text-white text-base focus:outline-none focus:border-studio-gold transition-colors"
+                            placeholder="10001"
+                            value={formData.zip_code}
+                            onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
+                        />
                     </div>
 
                     <div className="flex items-start space-x-3 pt-2">
