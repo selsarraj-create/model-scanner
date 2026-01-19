@@ -30,7 +30,12 @@ class handler(BaseHTTPRequestHandler):
             
             # Initialize Supabase client
             supabase_url = os.getenv('SUPABASE_URL')
-            supabase_key = os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') or os.getenv('SUPABASE_ANON_KEY') or os.getenv('SUPABASE_PUBLISHABLE_KEY')
+            supabase_key = (
+                os.getenv('SUPABASE_SERVICE_ROLE_KEY') or
+                os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') or 
+                os.getenv('SUPABASE_ANON_KEY') or 
+                os.getenv('SUPABASE_PUBLISHABLE_KEY')
+            )
             webhook_url = os.getenv('CRM_WEBHOOK_URL')
             
             if not supabase_url or not supabase_key:
