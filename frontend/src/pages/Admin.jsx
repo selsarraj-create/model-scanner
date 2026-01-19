@@ -17,8 +17,15 @@ const Admin = () => {
     const API_URL = import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:8000';
 
     useEffect(() => {
-        checkAuth();
-        fetchLeads();
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/login');
+            } else {
+                fetchLeads();
+            }
+        };
+        init();
     }, []);
 
     const checkAuth = async () => {
@@ -32,7 +39,7 @@ const Admin = () => {
         setLoading(true);
         try {
             const { data, error } = await supabase
-                .table('leads')
+                .from('leads')
                 .select('*')
                 .order('created_at', { ascending: false });
 
