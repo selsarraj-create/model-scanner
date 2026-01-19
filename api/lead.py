@@ -20,8 +20,16 @@ class handler(BaseHTTPRequestHandler):
             data = json.loads(body.decode('utf-8'))
             
             # Initialize Supabase client
-            supabase_url = os.getenv('SUPABASE_URL')
-            supabase_key = os.getenv('SUPABASE_PUBLISHABLE_KEY')
+            supabase_url = os.getenv('SUPABASE_URL') or os.getenv('VITE_SUPABASE_URL')
+            supabase_key = (
+                os.getenv('VITE_SUPABASE_ANON_KEY') or 
+                os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') or 
+                os.getenv('SUPABASE_ANON_KEY') or 
+                os.getenv('SUPABASE_PUBLISHABLE_KEY')
+            )
+            
+            print(f"DEBUG: URL found: {bool(supabase_url)}, Key found: {bool(supabase_key)}")
+            if supabase_key: print(f"DEBUG: Key starts with: {supabase_key[:5]}...")
             webhook_url = os.getenv('CRM_WEBHOOK_URL')
             
             if not supabase_url or not supabase_key:
