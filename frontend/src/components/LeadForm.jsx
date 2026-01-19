@@ -303,20 +303,10 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                         />
                     </div>
 
+                    {/* Checkbox Removed as per request
                     <div className="flex items-start space-x-3 pt-2">
-                        <div className="flex items-center h-5">
-                            <input
-                                id="assessment"
-                                type="checkbox"
-                                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-studio-gold focus:ring-studio-gold"
-                                checked={formData.wants_assessment}
-                                onChange={e => setFormData({ ...formData, wants_assessment: e.target.checked })}
-                            />
-                        </div>
-                        <label htmlFor="assessment" className="text-xs text-gray-400">
-                            I'd like a local verified studio to review my results for a professional assessment.
-                        </label>
-                    </div>
+                         ...
+                    </div> */}
 
                     {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
