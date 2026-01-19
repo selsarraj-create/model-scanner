@@ -17,10 +17,40 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const validateForm = () => {
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError("Please enter a valid email address.");
+            return false;
+        }
+
+        // Phone validation
+        // Remove non-digit chars
+        const cleanPhone = formData.phone.replace(/\D/g, '');
+
+        if (cleanPhone.length !== 10) {
+            setError("Phone number must be exactly 10 digits.");
+            return false;
+        }
+
+        if (cleanPhone.startsWith('1')) {
+            setError("Phone number cannot start with 1.");
+            return false;
+        }
+
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+
+        if (!validateForm()) {
+            setLoading(false);
+            return;
+        }
 
         try {
             // 1. Send data to backend
