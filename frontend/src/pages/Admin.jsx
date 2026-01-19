@@ -132,6 +132,7 @@ const Admin = () => {
                             <thead>
                                 <tr className="bg-white/5 border-b border-white/10 text-xs uppercase text-gray-400">
                                     <th className="p-4 font-semibold">Date</th>
+                                    <th className="p-4 font-semibold">Photo</th>
                                     <th className="p-4 font-semibold">Name</th>
                                     <th className="p-4 font-semibold">Contact</th>
                                     <th className="p-4 font-semibold">Score</th>
@@ -151,6 +152,15 @@ const Admin = () => {
                                             <td className="p-4 text-gray-400 whitespace-nowrap">
                                                 {new Date(lead.created_at).toLocaleDateString()}
                                                 <div className="text-xs opacity-60">{new Date(lead.created_at).toLocaleTimeString()}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                {lead.image_url ? (
+                                                    <a href={lead.image_url} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded-full overflow-hidden border border-white/20 hover:border-studio-gold transition-colors">
+                                                        <img src={lead.image_url} alt="Lead" className="w-full h-full object-cover" />
+                                                    </a>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xs text-gray-500">No Img</div>
+                                                )}
                                             </td>
                                             <td className="p-4 font-medium">
                                                 {lead.first_name} {lead.last_name}
