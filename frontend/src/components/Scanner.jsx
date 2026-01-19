@@ -14,6 +14,7 @@ const Scanner = () => {
     const [file, setFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [analysisResult, setAnalysisResult] = useState(null);
+    const [showApplyForm, setShowApplyForm] = useState(false);
     const fileInputRef = useRef(null);
 
     // Handlers
@@ -222,11 +223,37 @@ const Scanner = () => {
 
                                 {/* GATE OVERLAY */}
                                 {state === 'PREVIEW' && (
-                                    <LeadForm
-                                        analysisData={analysisResult}
-                                        imageBlob={file} // Passing blob reference if needed later
-                                        onSubmitSuccess={handleFormSuccess}
-                                    />
+                                    <>
+                                        {!showApplyForm ? (
+                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center z-10">
+                                                <div className="mb-4 text-studio-gold">
+                                                    <ScanFace size={48} strokeWidth={1.5} />
+                                                </div>
+                                                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-studio-gold to-white mb-2">
+                                                    Congratulations!
+                                                </h3>
+                                                <p className="text-white text-lg font-medium mb-6">
+                                                    You have potential.
+                                                </p>
+                                                <button
+                                                    onClick={() => setShowApplyForm(true)}
+                                                    className="bg-studio-gold hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-studio-gold/20"
+                                                >
+                                                    Apply Now
+                                                </button>
+                                                <p className="text-xs text-gray-400 mt-4">
+                                                    Unlock your full scout report
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <LeadForm
+                                                analysisData={analysisResult}
+                                                imageBlob={file} // Passing blob reference if needed later
+                                                onSubmitSuccess={handleFormSuccess}
+                                                onCancel={() => setShowApplyForm(false)}
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </div>
 
