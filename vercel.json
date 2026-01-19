@@ -6,20 +6,8 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/api/lead",
-      "destination": "/api/lead.py"
-    },
-    {
-      "source": "/api/analyze",
-      "destination": "/api/analyze.py"
-    },
-    {
-      "source": "/api/retry_webhook",
-      "destination": "/api/retry_webhook.py"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
     },
     {
       "source": "/(.*)",
