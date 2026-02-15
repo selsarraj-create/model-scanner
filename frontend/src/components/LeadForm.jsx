@@ -56,7 +56,8 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
         'Houston': { code: '#HOUFB3', lat: 29.7604, lon: -95.3698 },
         'Nashville': { code: '#NAFB3', lat: 36.1627, lon: -86.7816 },
         'Miami': { code: '#FLFB3', lat: 25.7617, lon: -80.1918 },
-        'Chicago': { code: '#CHIFB3', lat: 41.8781, lon: -87.6298 }
+        'Chicago': { code: '#CHIFB3', lat: 41.8781, lon: -87.6298 },
+        'Orlando': { code: '#ORLFB3', lat: 28.5383, lon: -81.3792 }
     };
 
     const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
