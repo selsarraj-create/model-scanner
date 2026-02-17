@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, User } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 const testimonials = [
     {
@@ -7,21 +7,24 @@ const testimonials = [
         name: "Sarah M.",
         role: "Aspiring Model",
         quote: "I always wondered if I had what it takes. This analysis gave me the confidence to finally apply to agencies!",
-        rating: 5
+        rating: 5,
+        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
     },
     {
         id: 2,
         name: "James T.",
         role: "New Face",
         quote: "The detailed breakdown of my features was incredible. It helped me understand my market type perfectly.",
-        rating: 5
+        rating: 5,
+        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
     },
     {
         id: 3,
         name: "Emily R.",
         role: "Freelance Model",
         quote: "Fast, accurate, and super helpful. The insider tips on lighting were a game changer for my portfolio.",
-        rating: 5
+        rating: 5,
+        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
     }
 ];
 
@@ -54,8 +57,12 @@ const Testimonials = () => {
                         </p>
 
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-gray-400">
-                                <User size={20} />
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 group-hover:border-studio-gold/50 transition-colors">
+                                <img
+                                    src={testimonial.image}
+                                    alt={testimonial.name}
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                             <div>
                                 <h4 className="text-white font-semibold text-sm">
