@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, ScanFace, Check } from 'lucide-react';
 import ProcessingAnimation from './ProcessingAnimation';
 import LeadForm from './LeadForm';
+import Testimonials from './Testimonials';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { compressImage } from '../utils/imageUtils';
@@ -279,6 +280,9 @@ const Scanner = () => {
                 )}
 
             </div>
+            {/* Testimonials Section */}
+            <Testimonials />
+
         </div>
     );
 };
