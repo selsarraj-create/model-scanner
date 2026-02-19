@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import json
 import os
 import time
-from typing import Optional
+from typing import Optional, List, Any
 from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -283,7 +283,7 @@ class RetryRequest(BaseModel):
     lead_id: str
 
 class BulkRetryRequest(BaseModel):
-    lead_ids: list
+    lead_ids: List[Any]
 
 def format_crm_payload(lead_record):
     """Format a Supabase lead record into the CRM-expected payload."""
