@@ -12,6 +12,7 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [resendingId, setResendingId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [bulkSending, setBulkSending] = useState(false);
     const navigate = useNavigate();
@@ -124,11 +125,13 @@ const Admin = () => {
         }
     };
 
-    const filteredLeads = leads.filter(lead =>
-        lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredLeads = leads.filter(lead => {
+        const matchesSearch = lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || lead.webhook_status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     const getStatusIcon = (status) => {
         switch (status) {
@@ -170,6 +173,16 @@ const Admin = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <select
+                        value={statusFilter}
+                        onChange={e => setStatusFilter(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:outline-none focus:border-studio-gold text-sm appearance-none cursor-pointer"
+                    >
+                        <option value="all" className="bg-gray-900">All Status</option>
+                        <option value="success" className="bg-gray-900">✓ Success</option>
+                        <option value="failed" className="bg-gray-900">✗ Failed</option>
+                        <option value="pending" className="bg-gray-900">⏳ Pending</option>
+                    </select>
                     <button onClick={fetchLeads} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                         <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Refresh
                     </button>
