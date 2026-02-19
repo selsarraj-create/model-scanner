@@ -285,44 +285,79 @@ class RetryRequest(BaseModel):
 class BulkRetryRequest(BaseModel):
     lead_ids: list
 
+def format_crm_payload(lead_record):
+    """Format a Supabase lead record into the CRM-expected payload."""
+    city = lead_record.get('city', '')
+    zip_code = lead_record.get('zip_code', '')
+    address = f"{city}, {zip_code}" if city and zip_code else (city or zip_code or "")
+    gender_raw = lead_record.get('gender', '')
+    
+    payload = {
+        'campaign': lead_record.get('campaign', ''),
+        'email': lead_record.get('email', ''),
+        'telephone': lead_record.get('phone', ''),
+        'address': address,
+        'firstname': lead_record.get('first_name', ''),
+        'lastname': lead_record.get('last_name', ''),
+        'image': lead_record.get('image_url', ''),
+        'analyticsid': '',
+        'age': str(lead_record.get('age', '')),
+        'gender': 'M' if gender_raw == 'Male' else 'F',
+        'opt_in': 'true' if lead_record.get('wants_assessment') else 'false'
+    }
+    return payload
+
 @app.post("/api/retry_webhook")
 async def retry_webhook(req: RetryRequest):
+    print(f"[RETRY] Starting retry for lead_id={req.lead_id}")
     try:
         supabase = get_supabase()
         webhook_url = os.getenv('CRM_WEBHOOK_URL')
+        print(f"[RETRY] Webhook URL configured: {bool(webhook_url)}")
         
         if not webhook_url:
             raise HTTPException(status_code=400, detail="CRM_WEBHOOK_URL not configured")
             
         resp = supabase.table('leads').select('*').eq('id', req.lead_id).execute()
         if not resp.data:
-             raise HTTPException(status_code=404, detail="Lead not found")
+            print(f"[RETRY] Lead not found: {req.lead_id}")
+            raise HTTPException(status_code=404, detail="Lead not found")
              
         lead_record = resp.data[0]
-        wb_resp = send_webhook(webhook_url, lead_record)
+        crm_payload = format_crm_payload(lead_record)
+        print(f"[RETRY] CRM payload: {json.dumps(crm_payload)}")
+        
+        wb_resp = send_webhook(webhook_url, crm_payload)
         
         status = 'success' if wb_resp and wb_resp.status_code < 300 else 'failed'
         resp_text = wb_resp.text if wb_resp else "Connection failed"
+        print(f"[RETRY] Webhook result: status={status}, code={wb_resp.status_code if wb_resp else 'N/A'}, response={resp_text[:200]}")
         
         supabase.table('leads').update({
             'webhook_sent': True,
             'webhook_status': status,
-            'webhook_response': resp_text
+            'webhook_response': resp_text[:500]
         }).eq('id', req.lead_id).execute()
         
         return {
             "status": "success", 
             "message": "Webhook retry attempted",
-            "webhook_status": status
+            "webhook_status": status,
+            "webhook_response": resp_text[:200]
         }
+    except HTTPException:
+        raise
     except Exception as e:
-         return JSONResponse(status_code=500, content={"error": str(e)})
+        print(f"[RETRY] ERROR: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/bulk_retry_webhook")
 async def bulk_retry_webhook(req: BulkRetryRequest):
+    print(f"[BULK_RETRY] Starting bulk retry for {len(req.lead_ids)} leads: {req.lead_ids}")
     try:
         supabase = get_supabase()
         webhook_url = os.getenv('CRM_WEBHOOK_URL')
+        print(f"[BULK_RETRY] Webhook URL configured: {bool(webhook_url)}, URL: {webhook_url[:30] if webhook_url else 'None'}...")
         
         if not webhook_url:
             raise HTTPException(status_code=400, detail="CRM_WEBHOOK_URL not configured")
@@ -331,36 +366,44 @@ async def bulk_retry_webhook(req: BulkRetryRequest):
         success_count = 0
         failed_count = 0
         
-        for lead_id in req.lead_ids:
+        for i, lead_id in enumerate(req.lead_ids):
+            print(f"[BULK_RETRY] Processing {i+1}/{len(req.lead_ids)}: lead_id={lead_id}")
             try:
                 resp = supabase.table('leads').select('*').eq('id', lead_id).execute()
                 if not resp.data:
+                    print(f"[BULK_RETRY] Lead not found: {lead_id}")
                     results.append({"id": lead_id, "status": "not_found"})
                     failed_count += 1
                     continue
                 
                 lead_record = resp.data[0]
-                wb_resp = send_webhook(webhook_url, lead_record)
+                crm_payload = format_crm_payload(lead_record)
+                print(f"[BULK_RETRY] Sending webhook for {lead_record.get('email', '?')}: {json.dumps(crm_payload)}")
+                
+                wb_resp = send_webhook(webhook_url, crm_payload)
                 
                 status = 'success' if wb_resp and wb_resp.status_code < 300 else 'failed'
                 resp_text = wb_resp.text if wb_resp else "Connection failed"
+                print(f"[BULK_RETRY] Result for {lead_id}: status={status}, code={wb_resp.status_code if wb_resp else 'N/A'}, response={resp_text[:200]}")
                 
                 supabase.table('leads').update({
                     'webhook_sent': True,
                     'webhook_status': status,
-                    'webhook_response': resp_text
+                    'webhook_response': resp_text[:500]
                 }).eq('id', lead_id).execute()
                 
-                results.append({"id": lead_id, "status": status})
+                results.append({"id": lead_id, "status": status, "response": resp_text[:100]})
                 if status == 'success':
                     success_count += 1
                 else:
                     failed_count += 1
                     
             except Exception as e:
+                print(f"[BULK_RETRY] ERROR for {lead_id}: {str(e)}")
                 results.append({"id": lead_id, "status": "error", "message": str(e)[:200]})
                 failed_count += 1
         
+        print(f"[BULK_RETRY] Complete: {success_count} success, {failed_count} failed out of {len(req.lead_ids)}")
         return {
             "status": "success",
             "total": len(req.lead_ids),
@@ -368,7 +411,10 @@ async def bulk_retry_webhook(req: BulkRetryRequest):
             "failed": failed_count,
             "results": results
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[BULK_RETRY] FATAL ERROR: {str(e)}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/test_webhook")

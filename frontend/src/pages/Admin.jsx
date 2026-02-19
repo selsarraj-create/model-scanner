@@ -101,13 +101,24 @@ const Admin = () => {
             const res = await axios.post(`${API_URL}/bulk_retry_webhook`, {
                 lead_ids: Array.from(selectedIds)
             });
-            const { success, failed, total } = res.data;
-            alert(`Bulk resend complete: ${success}/${total} succeeded, ${failed} failed.`);
+            const { success, failed, total, results } = res.data;
+            console.log('[BULK_RETRY] Full response:', JSON.stringify(res.data, null, 2));
+
+            // Build detailed message
+            let msg = `Bulk resend complete: ${success}/${total} succeeded, ${failed} failed.`;
+            if (failed > 0 && results) {
+                const failedResults = results.filter(r => r.status !== 'success');
+                msg += '\n\nFailed leads:\n' + failedResults.map(r =>
+                    `• ${r.id}: ${r.status} - ${r.response || r.message || 'Unknown'}`
+                ).join('\n');
+            }
+            alert(msg);
             setSelectedIds(new Set());
             fetchLeads();
         } catch (error) {
             console.error('Bulk retry failed:', error);
-            alert('Bulk resend failed. Check console for details.');
+            const detail = error.response?.data?.error || error.response?.data?.detail || error.message;
+            alert(`Bulk resend failed: ${detail}`);
         } finally {
             setBulkSending(false);
         }
