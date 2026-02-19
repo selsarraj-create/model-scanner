@@ -72,6 +72,9 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
         return R * c;
     }
 
+    // States that should always route to Boston
+    const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI'];
+
     const calculateCampaignCode = async (zip, age, gender) => {
         try {
             // 1. Get Lat/Lon and City from Zip
@@ -80,21 +83,26 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             const userLat = parseFloat(place.latitude);
             const userLon = parseFloat(place.longitude);
             const cityName = place['place name'];
+            const stateAbbr = place['state abbreviation'];
 
-            // 2. Find Nearest City
-            let nearestCity = null;
-            let minDistance = Infinity;
+            // 2. State-based override: CT, MA, NH, RI → Boston
+            let cityCode;
+            if (BOSTON_STATES.includes(stateAbbr)) {
+                cityCode = TARGET_CITIES['Boston'].code;
+            } else {
+                // 3. Find Nearest City by distance
+                let nearestCity = null;
+                let minDistance = Infinity;
 
-            for (const [city, data] of Object.entries(TARGET_CITIES)) {
-                const distance = getDistanceFromLatLonInKm(userLat, userLon, data.lat, data.lon);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestCity = data.code;
+                for (const [city, data] of Object.entries(TARGET_CITIES)) {
+                    const distance = getDistanceFromLatLonInKm(userLat, userLon, data.lat, data.lon);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestCity = data.code;
+                    }
                 }
+                cityCode = nearestCity || '#NYFB3';
             }
-
-            // Fallback
-            const cityCode = nearestCity || '#NYFB3';
 
             // 3. Age Code
             const ageNum = parseInt(age);
