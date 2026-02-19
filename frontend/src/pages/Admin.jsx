@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import {
     LogOut, RefreshCw, CheckCircle, XCircle, Clock,
-    Search, Calendar, Filter, Download
+    Search, Calendar, Filter, Download, Send
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -12,6 +12,8 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [resendingId, setResendingId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkSending, setBulkSending] = useState(false);
     const navigate = useNavigate();
 
     const API_URL = import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:8000';
@@ -71,6 +73,46 @@ const Admin = () => {
         }
     };
 
+    // Bulk selection handlers
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredLeads.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredLeads.map(l => l.id)));
+        }
+    };
+
+    const handleBulkRetry = async () => {
+        if (selectedIds.size === 0) return;
+        setBulkSending(true);
+        try {
+            const res = await axios.post(`${API_URL}/bulk_retry_webhook`, {
+                lead_ids: Array.from(selectedIds)
+            });
+            const { success, failed, total } = res.data;
+            alert(`Bulk resend complete: ${success}/${total} succeeded, ${failed} failed.`);
+            setSelectedIds(new Set());
+            fetchLeads();
+        } catch (error) {
+            console.error('Bulk retry failed:', error);
+            alert('Bulk resend failed. Check console for details.');
+        } finally {
+            setBulkSending(false);
+        }
+    };
+
     const filteredLeads = leads.filter(lead =>
         lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,12 +167,43 @@ const Admin = () => {
                     </button>
                 </div>
 
+                {/* Bulk Action Bar */}
+                {selectedIds.size > 0 && (
+                    <div className="mb-4 flex items-center gap-4 px-4 py-3 rounded-xl bg-studio-gold/10 border border-studio-gold/30 animate-in">
+                        <span className="text-sm text-studio-gold font-semibold">
+                            {selectedIds.size} lead{selectedIds.size > 1 ? 's' : ''} selected
+                        </span>
+                        <button
+                            onClick={handleBulkRetry}
+                            disabled={bulkSending}
+                            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-studio-gold text-black text-sm font-bold hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Send size={14} />
+                            {bulkSending ? 'Sending...' : 'Resend Selected'}
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="text-xs text-gray-400 hover:text-white transition-colors ml-auto"
+                        >
+                            Clear Selection
+                        </button>
+                    </div>
+                )}
+
                 {/* Table */}
                 <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-white/5 border-b border-white/10 text-xs uppercase text-gray-400">
+                                    <th className="p-4 font-semibold w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={filteredLeads.length > 0 && selectedIds.size === filteredLeads.length}
+                                            onChange={toggleSelectAll}
+                                            className="w-4 h-4 rounded border-white/20 bg-white/5 accent-yellow-500 cursor-pointer"
+                                        />
+                                    </th>
                                     <th className="p-4 font-semibold">Date</th>
                                     <th className="p-4 font-semibold">Photo</th>
                                     <th className="p-4 font-semibold">Name</th>
@@ -144,12 +217,20 @@ const Admin = () => {
                             </thead>
                             <tbody className="divide-y divide-white/10 text-sm">
                                 {loading ? (
-                                    <tr><td colSpan="8" className="p-8 text-center text-gray-500">Loading leads...</td></tr>
+                                    <tr><td colSpan="10" className="p-8 text-center text-gray-500">Loading leads...</td></tr>
                                 ) : filteredLeads.length === 0 ? (
-                                    <tr><td colSpan="8" className="p-8 text-center text-gray-500">No leads found matching your search.</td></tr>
+                                    <tr><td colSpan="10" className="p-8 text-center text-gray-500">No leads found matching your search.</td></tr>
                                 ) : (
                                     filteredLeads.map(lead => (
-                                        <tr key={lead.id} className="hover:bg-white/5 transition-colors">
+                                        <tr key={lead.id} className={`hover:bg-white/5 transition-colors ${selectedIds.has(lead.id) ? 'bg-studio-gold/5' : ''}`}>
+                                            <td className="p-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.has(lead.id)}
+                                                    onChange={() => toggleSelect(lead.id)}
+                                                    className="w-4 h-4 rounded border-white/20 bg-white/5 accent-yellow-500 cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="p-4 text-gray-400 whitespace-nowrap">
                                                 {new Date(lead.created_at).toLocaleDateString()}
                                                 <div className="text-xs opacity-60">{new Date(lead.created_at).toLocaleTimeString()}</div>

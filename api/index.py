@@ -282,6 +282,9 @@ async def analyze_endpoint(file: UploadFile = File(...)):
 class RetryRequest(BaseModel):
     lead_id: str
 
+class BulkRetryRequest(BaseModel):
+    lead_ids: list
+
 @app.post("/api/retry_webhook")
 async def retry_webhook(req: RetryRequest):
     try:
@@ -314,6 +317,59 @@ async def retry_webhook(req: RetryRequest):
         }
     except Exception as e:
          return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/bulk_retry_webhook")
+async def bulk_retry_webhook(req: BulkRetryRequest):
+    try:
+        supabase = get_supabase()
+        webhook_url = os.getenv('CRM_WEBHOOK_URL')
+        
+        if not webhook_url:
+            raise HTTPException(status_code=400, detail="CRM_WEBHOOK_URL not configured")
+        
+        results = []
+        success_count = 0
+        failed_count = 0
+        
+        for lead_id in req.lead_ids:
+            try:
+                resp = supabase.table('leads').select('*').eq('id', lead_id).execute()
+                if not resp.data:
+                    results.append({"id": lead_id, "status": "not_found"})
+                    failed_count += 1
+                    continue
+                
+                lead_record = resp.data[0]
+                wb_resp = send_webhook(webhook_url, lead_record)
+                
+                status = 'success' if wb_resp and wb_resp.status_code < 300 else 'failed'
+                resp_text = wb_resp.text if wb_resp else "Connection failed"
+                
+                supabase.table('leads').update({
+                    'webhook_sent': True,
+                    'webhook_status': status,
+                    'webhook_response': resp_text
+                }).eq('id', lead_id).execute()
+                
+                results.append({"id": lead_id, "status": status})
+                if status == 'success':
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    
+            except Exception as e:
+                results.append({"id": lead_id, "status": "error", "message": str(e)[:200]})
+                failed_count += 1
+        
+        return {
+            "status": "success",
+            "total": len(req.lead_ids),
+            "success": success_count,
+            "failed": failed_count,
+            "results": results
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/test_webhook")
 async def test_webhook_connection():
