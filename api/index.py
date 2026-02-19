@@ -280,7 +280,7 @@ async def analyze_endpoint(file: UploadFile = File(...)):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 class RetryRequest(BaseModel):
-    lead_id: str
+    lead_id: Any
 
 class BulkRetryRequest(BaseModel):
     lead_ids: List[Any]
