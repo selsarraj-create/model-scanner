@@ -329,9 +329,9 @@ async def retry_webhook(req: RetryRequest):
         
         wb_resp = send_webhook(webhook_url, crm_payload)
         
-        status = 'success' if wb_resp and wb_resp.status_code < 300 else 'failed'
-        resp_text = wb_resp.text if wb_resp else "Connection failed"
-        print(f"[RETRY] Webhook result: status={status}, code={wb_resp.status_code if wb_resp else 'N/A'}, response={resp_text[:200]}")
+        status = 'success' if wb_resp is not None and wb_resp.status_code < 300 else 'failed'
+        resp_text = wb_resp.text if wb_resp is not None else "Connection failed"
+        print(f"[RETRY] Webhook result: status={status}, code={wb_resp.status_code if wb_resp is not None else 'N/A'}, response={resp_text[:200]}")
         
         supabase.table('leads').update({
             'webhook_sent': True,
@@ -382,9 +382,9 @@ async def bulk_retry_webhook(req: BulkRetryRequest):
                 
                 wb_resp = send_webhook(webhook_url, crm_payload)
                 
-                status = 'success' if wb_resp and wb_resp.status_code < 300 else 'failed'
-                resp_text = wb_resp.text if wb_resp else "Connection failed"
-                print(f"[BULK_RETRY] Result for {lead_id}: status={status}, code={wb_resp.status_code if wb_resp else 'N/A'}, response={resp_text[:200]}")
+                status = 'success' if wb_resp is not None and wb_resp.status_code < 300 else 'failed'
+                resp_text = wb_resp.text if wb_resp is not None else "Connection failed"
+                print(f"[BULK_RETRY] Result for {lead_id}: status={status}, code={wb_resp.status_code if wb_resp is not None else 'N/A'}, response={resp_text[:200]}")
                 
                 supabase.table('leads').update({
                     'webhook_sent': True,
