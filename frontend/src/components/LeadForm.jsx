@@ -75,6 +75,9 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
     // States that should always route to Boston
     const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI'];
 
+    // Tampa latitude — the horizontal cutoff line across Florida
+    const TAMPA_LAT = 27.95;
+
     const calculateCampaignCode = async (zip, age, gender) => {
         try {
             // 1. Get Lat/Lon and City from Zip
@@ -85,10 +88,14 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             const cityName = place['place name'];
             const stateAbbr = place['state abbreviation'];
 
-            // 2. State-based override: CT, MA, NH, RI → Boston
+            // 2. State/region overrides
             let cityCode;
             if (BOSTON_STATES.includes(stateAbbr)) {
+                // CT, MA, NH, RI → Boston
                 cityCode = TARGET_CITIES['Boston'].code;
+            } else if (stateAbbr === 'FL' && userLat < TAMPA_LAT) {
+                // South Florida (below Tampa line) → Miami
+                cityCode = TARGET_CITIES['Miami'].code;
             } else {
                 // 3. Find Nearest City by distance
                 let nearestCity = null;
