@@ -111,14 +111,28 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                 cityCode = nearestCity || '#NYFB3';
             }
 
-            // 3. Age Code
+            // 3. Age Code + Gender Code
             const ageNum = parseInt(age);
-            let ageCode = '1';
-            if (ageNum >= 35 && ageNum <= 44) ageCode = '2';
-            if (ageNum >= 45) ageCode = '3';
-
-            // 4. Gender Code
             const genderCode = gender === 'Female' ? 'F' : 'M';
+
+            let ageCode;
+            const isFlorida = cityCode === TARGET_CITIES['Miami'].code || cityCode === TARGET_CITIES['Orlando'].code;
+
+            if (isFlorida) {
+                // Florida-specific age codes
+                if (genderCode === 'M') {
+                    // Males: all ages → 1
+                    ageCode = '1';
+                } else {
+                    // Females: 0-34 → 1, 35+ → 2
+                    ageCode = ageNum >= 35 ? '2' : '1';
+                }
+            } else {
+                // Default age codes for all other cities
+                ageCode = '1';
+                if (ageNum >= 35 && ageNum <= 44) ageCode = '2';
+                if (ageNum >= 45) ageCode = '3';
+            }
 
             return { code: `${cityCode}${ageCode}${genderCode}`, city: cityName };
 
