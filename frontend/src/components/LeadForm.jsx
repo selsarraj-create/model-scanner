@@ -75,6 +75,13 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
     // States that should always route to Boston
     const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI'];
 
+    // States where applications are not accepted
+    const BLOCKED_STATES = [
+        'WA', 'OR', 'CA', 'NV', 'AZ', 'UT', 'ID', 'MT', 'WY', 'CO',
+        'NM', 'ND', 'SD', 'NE', 'KS', 'OK', 'AR', 'LA', 'MO', 'MS',
+        'AL', 'GA', 'SC', 'NC', 'VA', 'ME', 'AK', 'HI'
+    ];
+
     // Tampa latitude — the horizontal cutoff line across Florida
     const TAMPA_LAT = 27.95;
 
@@ -87,6 +94,11 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             const userLon = parseFloat(place.longitude);
             const cityName = place['place name'];
             const stateAbbr = place['state abbreviation'];
+
+            // 1b. Block restricted states
+            if (BLOCKED_STATES.includes(stateAbbr)) {
+                throw new Error("We're not currently accepting applications from your area. Stay tuned!");
+            }
 
             // 2. State/region overrides
             let cityCode;
@@ -138,8 +150,8 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
 
         } catch (error) {
             console.error("Error calculating campaign code:", error);
-            // Throw error to be caught by handleSubmit
-            throw new Error("Invalid Zip Code");
+            // Preserve blocked-state messages, fallback for zip errors
+            throw new Error(error.message || "Invalid Zip Code");
         }
     };
 
