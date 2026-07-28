@@ -73,7 +73,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
     }
 
     // States that should always route to Boston
-    const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI'];
+    const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI', 'NY'];
 
     // Allowed zip code prefixes (first 3 digits) — everything else is blocked
     const ALLOWED_ZIP_PREFIXES = [
@@ -157,7 +157,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             // 2. State/region overrides
             let cityCode;
             if (BOSTON_STATES.includes(stateAbbr)) {
-                // CT, MA, NH, RI → Boston
+                // CT, MA, NH, RI, NY → Boston
                 cityCode = TARGET_CITIES['Boston'].code;
             } else if (stateAbbr === 'FL' && userLat < TAMPA_LAT) {
                 // South Florida (below Tampa line) → Miami
