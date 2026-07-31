@@ -51,7 +51,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
     // Campaign Code Logic
     const TARGET_CITIES = {
         'Boston': { code: '#BOFB3', lat: 42.3601, lon: -71.0589 },
-        'New York': { code: '#BOFB3', lat: 40.7128, lon: -74.0060 }, // Temporarily routed to Boston (#BOFB3)
+        'New York': { code: '#NYFB3', lat: 40.7128, lon: -74.0060 },
         'Dallas': { code: '#DALFB3', lat: 32.7767, lon: -96.7970 },
         'Houston': { code: '#HOUFB3', lat: 29.7604, lon: -95.3698 },
         'Nashville': { code: '#NAFB3', lat: 36.1627, lon: -86.7816 },
@@ -73,7 +73,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
     }
 
     // States that should always route to Boston
-    const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI', 'NY'];
+    const BOSTON_STATES = ['CT', 'MA', 'NH', 'RI'];
 
     // Allowed zip code prefixes (first 3 digits) — everything else is blocked
     const ALLOWED_ZIP_PREFIXES = [
@@ -157,7 +157,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
             // 2. State/region overrides
             let cityCode;
             if (BOSTON_STATES.includes(stateAbbr)) {
-                // CT, MA, NH, RI, NY → Boston
+                // CT, MA, NH, RI → Boston
                 cityCode = TARGET_CITIES['Boston'].code;
             } else if (stateAbbr === 'FL' && userLat < TAMPA_LAT) {
                 // South Florida (below Tampa line) → Miami
@@ -174,12 +174,7 @@ const LeadForm = ({ analysisData, imageBlob, onSubmitSuccess, onCancel }) => {
                         nearestCity = data.code;
                     }
                 }
-                cityCode = nearestCity || '#BOFB3';
-            }
-
-            // Safeguard: Temporarily force any NYFB3 code to Boston (#BOFB3)
-            if (cityCode === '#NYFB3') {
-                cityCode = '#BOFB3';
+                cityCode = nearestCity || '#NYFB3';
             }
 
             // 3. Age Code + Gender Code
